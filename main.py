@@ -5,6 +5,14 @@ from bs4 import BeautifulSoup, SoupStrainer
 import re
 from datetime import date, timedelta
 import matplotlib.pyplot as plt
+import statistics
+import threading
+
+
+ListDureesFilms = []
+ListAllWednesday = []
+ListOfMeanByYear = []
+StartDate = 0
 
 
 def DateOfAllWednesday(year):
@@ -75,29 +83,35 @@ def GetListOfDurationByWeek(weekDate):
                 ListOfDurationByWeek.append(FilmDuration)
     return ListOfDurationByWeek
 
+def AppendMeanByYear(ListAllWednesday):
+    ListOfMeanDurationOfFilmsByYear = []
+    for j in range(len(ListAllWednesday)):
+        ListOfDurationByWeek = GetListOfDurationByWeek(str(ListAllWednesday[j]))
+        if(len(ListOfDurationByWeek) != 0):
+            ListOfMeanDurationOfFilmsByYear.append(statistics.mean(ListOfDurationByWeek))
+    ListOfMeanByYear.append(round(statistics.mean(ListOfMeanDurationOfFilmsByYear), 1))
+
 print("This program will calculate the average duration of movies per year. The data come from allocine.fr")
 print("Years before 1970 are not available.\n")
 
-ListDureesFilms = []
-ListAllWednesday = []
-ListOfMeanByYear = []
-StartDate = 0
+
 requests_session = requests.Session()
 
 print("From which year do you want to conduct the study?\n")
 AskDate()
 ListOfYear = GetListOfYear(StartDate)
+ThreadList = []
+
+print("The program is running, please wait.\nThe program may take several minutes to run.")
 
 for i in range(len(ListOfYear)):
-    ListOfMeanDurationOfFilmsByYear = []
     ListAllWednesday = DateOfAllWednesday(ListOfYear[i])
-    for j in range(len(ListAllWednesday)):
-        ListOfDurationByWeek = GetListOfDurationByWeek(str(ListAllWednesday[j]))
-        if(len(ListOfDurationByWeek) != 0):
-            ListOfMeanDurationOfFilmsByYear.append((sum(ListOfDurationByWeek) / len(ListOfDurationByWeek)))
-        print("The study of the year " + str(ListOfYear[i]) + " is " + str(round(((ListAllWednesday.index(ListAllWednesday[j])+1)/len(ListAllWednesday))*100)) + "% completed")
-    ListOfMeanByYear.append(round((sum(ListOfMeanDurationOfFilmsByYear) / len(ListOfMeanDurationOfFilmsByYear)), 1))
-    print()
+    thread = threading.Thread(name="thread " + str(ListOfYear[i]), target=AppendMeanByYear, args=(ListAllWednesday,))
+    ThreadList.append(thread)
+    thread.start()
+
+for thread in ThreadList:
+    thread.join()
 
 SaveScatterPlot(ListOfMeanByYear)
 
